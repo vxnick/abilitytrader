@@ -1,0 +1,17 @@
+abilities:
+  workbench:
+    description: No need for workbenches any more!
+    permissions:
+      - essentials.workbench
+    commands: []
+    cost: 10
+    type: rent
+    duration: 300
+  me:
+    description: Say stuff third-person style
+    permissions:
+      - essentials.me
+    commands: []
+    cost: 5
+    type: buy
+players: []
