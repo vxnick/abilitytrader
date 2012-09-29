@@ -30,9 +30,7 @@ public class AbilityTrader extends JavaPlugin {
 		saveDefaultConfig();
 		
 		getServer().getScheduler().scheduleAsyncRepeatingTask(this, new Runnable() {
-			public void run() {
-				getLogger().info("Running ability clean-up task");
-				
+			public void run() {				
 				// Get a list of players and their abilities, and remove expired abilities
 				ConfigurationSection player_section = getConfig().getConfigurationSection("players");
 				
@@ -54,7 +52,7 @@ public class AbilityTrader extends JavaPlugin {
 					for (String ability : abilities) {
 						Integer expires_at = getConfig().getInt(String.format("players.%s.%s.expires_at", player, ability), 0);
 
-						if (expires_at < getUnixTime()) {
+						if (expires_at > 0 && expires_at < getUnixTime()) {
 							// Get a list of permissions for the given ability
 							List<String> permissions = getConfig().getStringList(String.format("abilities.%s.permissions", ability));
 							
@@ -62,7 +60,7 @@ public class AbilityTrader extends JavaPlugin {
 								// Remove the permission if the player has it
 								if (perms.has((String) null, player, permission)) {
 									// Apply this to all worlds
-									perms.playerRemove((String) null, (String) player, permission);
+									perms.playerRemove((String) null, player, permission);
 									getConfig().set(String.format("players.%s.%s", player, ability), null);
 								}
 							}
