@@ -68,6 +68,8 @@ public class AbilityTrader extends JavaPlugin {
 						}
 					}
 				}
+				
+				saveConfig();
 			}
 		}, 40L, 1200L);
 	}
