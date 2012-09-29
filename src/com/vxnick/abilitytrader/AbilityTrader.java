@@ -2,6 +2,7 @@ package com.vxnick.abilitytrader;
 
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
 
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
@@ -22,7 +23,7 @@ public class AbilityTrader extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		if (!setupEconomy() ) {
-            getLogger().info("Vault plugin not found. Disabling AbilityTrader");
+            getLogger().log(Level.SEVERE, "Vault not found. Disabling AbilityTrader");
             return;
         }
 		
