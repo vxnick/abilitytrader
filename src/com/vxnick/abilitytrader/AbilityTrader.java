@@ -24,11 +24,11 @@ public class AbilityTrader extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		if (!setupEconomy() ) {
-            getLogger().log(Level.SEVERE, "Vault not found. Disabling AbilityTrader");
-            return;
-        }
+			getLogger().log(Level.SEVERE, "Vault not found. Disabling AbilityTrader");
+			return;
+		}
 		
-        setupPermissions();
+		setupPermissions();
 		saveDefaultConfig();
 		
 		// Schedule removal of expired player abilities every minute
