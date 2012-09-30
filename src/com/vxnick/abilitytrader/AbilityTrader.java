@@ -209,13 +209,13 @@ public class AbilityTrader extends JavaPlugin {
 	private String formatDuration(long seconds) {
 		if (seconds < 60) {
 			return String.format("%d second%s", seconds, (seconds == 1 ? "" : "s"));
-		} else if (seconds <= 3600) {
+		} else if (seconds < 3600) {
 			return String.format("%d minute%s", (seconds / 60), ((seconds / 60) == 1 ? "" : "s"));
-		} else if (seconds <= 86400) {
-			return String.format("%d day%s", (seconds / 3600), ((seconds / 3600) == 1 ? "" : "s"));
+		} else if (seconds < 86400) {
+			return String.format("%d hour%s", (seconds / 3600), ((seconds / 3600) == 1 ? "" : "s"));
+		} else {
+			return String.format("%d day%s", (seconds / 86400), ((seconds / 86400) == 1 ? "" : "s"));
 		}
-		
-		return null;
 	}
 	
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
