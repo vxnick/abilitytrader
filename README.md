@@ -1,3 +1,7 @@
 AbilityTrader, a Minecraft Bukkit plugin.
 
-Not recommended for general use yet, as there are a few bugs.
+Allows players to buy and rent commands and permissions.
+
+Requires: Vault
+
+More info coming soon!

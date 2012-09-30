@@ -1,17 +1,27 @@
 abilities:
   workbench:
-    description: No need for workbenches any more!
+    description: No need for real workbenches any more!
     permissions:
       - essentials.workbench
-    commands: []
-    cost: 10
-    type: rent
+    commands:
+      add: []
+      remove:
+        - msg {0} Removing workbench ability
+    rent_cost: 100
     duration: 300
   me:
     description: Say stuff third-person style
     permissions:
       - essentials.me
-    commands: []
-    cost: 5
-    type: buy
+    commands:
+      add: []
+      remove: []
+    buy_cost: 5000
+    rent_cost: 15
+    duration: 60
+  hat:
+    description: Look dapper in your choice of hat
+    permissions:
+      - essentials.hat
+    buy_cost: 1000
 players: []
