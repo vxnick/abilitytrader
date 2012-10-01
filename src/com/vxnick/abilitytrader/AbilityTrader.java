@@ -219,7 +219,7 @@ public class AbilityTrader extends JavaPlugin {
 	}
 	
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-		if (label.equalsIgnoreCase("ability")) {
+		if (cmd.getName().equalsIgnoreCase("ability")) {
 			if (!(sender instanceof Player)) {
 				sender.sendMessage("Sorry, this isn't compatible with the console just yet");
 				return true;
