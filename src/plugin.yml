@@ -10,7 +10,7 @@ commands:
   ability:
     description: Ability Trader
     usage: /<command> help for a list of commands
-    aliases: abt
+    aliases: [ab, at, abt]
     permission: abilitytrader.use
     permission-message: You don't have permission
 permissions:
