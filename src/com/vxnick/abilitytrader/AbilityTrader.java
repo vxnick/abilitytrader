@@ -84,6 +84,20 @@ public class AbilityTrader extends JavaPlugin {
 		return null;
 	}
 	
+	private boolean playerHasAbility(String player, String ability) {
+		// Check the players configuration section exists
+		if (getPlayers() == null) {
+			return false;
+		}
+		
+		if (getConfig().getString(String.format("players.%s.%s", player, ability)) == null) {
+			return false;
+		}
+		
+		return true;
+	}
+
+	
 	private Set<String> getPlayerAbilities(String player) {
 		// Check the players configuration section exists
 		if (getPlayers() == null) {
@@ -141,6 +155,13 @@ public class AbilityTrader extends JavaPlugin {
 								
 								// Remove the player ability
 								getConfig().set(String.format("players.%s.%s", player, ability), null);
+								
+								// Remove this player's section if they have no other abilities
+								Set<String> removeFromAbilities = getPlayerAbilities(player);
+								
+								if (removeFromAbilities == null || removeFromAbilities.isEmpty()) {
+									getConfig().set(String.format("players.%s", player), null);
+								}
 							}
 						}
 						
@@ -237,12 +258,84 @@ public class AbilityTrader extends JavaPlugin {
 			String command = args[0].toLowerCase();
 			Player player = (Player) sender;
 			
-			if (perms.has(player, "abilitytrader.admin")) {
-				if (command.equals("reload")) {
-					player.sendMessage(ChatColor.YELLOW + "Reloading configuration");
-					reloadConfig();
+			if (perms.has(player, "abilitytrader.admin.reload") && command.equals("reload")) {
+				player.sendMessage(ChatColor.YELLOW + "Reloading configuration");
+				reloadConfig();
+				return true;
+			// List players with abilities
+			} else if (perms.has(player, "abilitytrader.admin.players") && command.equals("players")) {
+				Set<String> listedPlayers = getPlayers();
+				
+				if (listedPlayers == null || listedPlayers.isEmpty()) {
+					player.sendMessage(ChatColor.YELLOW + "There are currently no players with abilities");
 					return true;
 				}
+				
+				player.sendMessage(ChatColor.GOLD + "Players with Abilities");
+				
+				for (String listedPlayer : listedPlayers) {
+					Set<String> playerAbilities = getPlayerAbilities(listedPlayer);
+					
+					player.sendMessage(ChatColor.BLUE + listedPlayer);
+					
+					if (playerAbilities != null) {
+						for (String listedAbility : playerAbilities) {
+							String description = getConfig().getString(String.format("abilities.%s.description", listedAbility), "No description");
+							long expiresAt = getConfig().getLong(String.format("players.%s.%s.expires_at", listedPlayer, listedAbility), 0);
+							String timeRemaining = expiresAt == 0 ? "" : String.format("%s remaining", formatDuration(expiresAt - getUnixTime()));
+							
+							player.sendMessage(String.format(ChatColor.YELLOW + "%s -- %s", listedAbility, description));
+
+							// Only show when remaining time is a positive number - the task doesn't remove abilities at the exact moment of expiry
+							if ((expiresAt - getUnixTime()) > 0) {					
+								
+								if (timeRemaining != "") {
+									player.sendMessage(timeRemaining);
+								}
+							} else {
+								if (timeRemaining != "") {
+									player.sendMessage("expired - pending removal");
+								}
+							}
+						}
+					}
+				}
+				
+				return true;
+			// Remove an ability from another player
+			} else if (perms.has(player, "abilitytrader.admin.remove") && command.equals("remove")) {
+				if (args.length < 3) {
+					player.sendMessage(ChatColor.YELLOW + "Please specify a player and ability to remove");
+					return true;
+				}
+				
+				String removeFrom = args[1].toLowerCase();
+				String ability = args[2].toLowerCase();
+				
+				// Check this player exists
+				if (getServer().getPlayerExact(removeFrom) == null) {
+					player.sendMessage(ChatColor.RED + String.format("%s is not a player on this server", removeFrom));
+					return true;
+				}
+				
+				if (playerHasAbility(player.getName(), ability)) {
+					// Just remove it - don't run any post-removal commands
+					getConfig().set(String.format("players.%s.%s", removeFrom, ability), null);
+					
+					// Remove this player's section if they have no other abilities
+					Set<String> removeFromAbilities = getPlayerAbilities(removeFrom);
+					
+					if (removeFromAbilities == null || removeFromAbilities.isEmpty()) {
+						getConfig().set(String.format("players.%s", removeFrom), null);
+					}
+					
+					player.sendMessage(ChatColor.GREEN + String.format("The '%s' ability has been removed from '%s'!", ability, removeFrom));
+					saveConfig();
+					return true;
+				}
+				
+				player.sendMessage(ChatColor.YELLOW + String.format("%s doesn't have the '%s' ability", removeFrom, ability));
+				return true;
 			}
 			
 			if (command.equals("list")) {

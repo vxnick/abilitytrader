@@ -1,6 +1,6 @@
 name: AbilityTrader
 main: com.vxnick.abilitytrader.AbilityTrader
-version: 0.2.2
+version: 0.3.0
 description: Allows abilities (commands and permissions) to be purchased or rented.
 author: vxnick
 website: http://github.com/vxnick/abilitytrader
@@ -16,7 +16,20 @@ commands:
 permissions:
   abilitytrader.use:
     description: Allows use of this command
+    default: true
+  abilitytrader.admin.reload:
+    description: Reload AbilityTrader configuration
     default: op
-  abilitytrader.admin:
+  abilitytrader.admin.players:
+    description: List players with abilities
+    default: op
+  abilitytrader.admin.remove:
+    description: Remove abilities from players
+    default: op
+  abilitytrader.admin.*:
     description: Administrative commands
     default: op
+    children:
+      abilitytrader.admin.players: true
+      abilitytrader.admin.remove: true
+      abilitytrader.admin.reload: true
