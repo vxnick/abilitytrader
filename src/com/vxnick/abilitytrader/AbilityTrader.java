@@ -182,7 +182,7 @@ public class AbilityTrader extends JavaPlugin {
 		saveConfig();
 	}
 	
-	private boolean givePlayerAbility(Player player, String ability, boolean rented) {
+	private boolean givePlayerAbility(CommandSender player, String ability, boolean rented) {
 		// Get a list of permissions for the given ability
 		List<String> permissions = getConfig().getStringList(String.format("abilities.%s.permissions", ability));
 		
@@ -190,7 +190,7 @@ public class AbilityTrader extends JavaPlugin {
 			// Add the permission if the player doesn't already have it
 			if (!perms.has(player, permission)) {
 				// Apply this to all worlds
-				perms.playerAdd((String) null, (String) player.getName(), permission);
+				perms.playerAdd((String) null, player.getName(), permission);
 			}
 		}
 		
@@ -241,11 +241,6 @@ public class AbilityTrader extends JavaPlugin {
 	
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("ability")) {
-			if (!(sender instanceof Player)) {
-				sender.sendMessage("Sorry, this isn't compatible with the console just yet");
-				return true;
-			}
-			
 			if (!perms.has(sender, "abilitytrader.use")) {
 				sender.sendMessage(ChatColor.RED + "Sorry, you don't have access to Ability Trader");
 				return true;
@@ -256,27 +251,26 @@ public class AbilityTrader extends JavaPlugin {
 			}
 			
 			String command = args[0].toLowerCase();
-			Player player = (Player) sender;
 			
-			if (perms.has(player, "abilitytrader.admin.reload") && command.equals("reload")) {
-				player.sendMessage(ChatColor.YELLOW + "Reloading configuration");
+			if (perms.has(sender, "abilitytrader.admin.reload") && command.equals("reload")) {
+				sender.sendMessage(ChatColor.YELLOW + "Reloading configuration");
 				reloadConfig();
 				return true;
 			// List players with abilities
-			} else if (perms.has(player, "abilitytrader.admin.players") && command.equals("players")) {
+			} else if (perms.has(sender, "abilitytrader.admin.players") && command.equals("players")) {
 				Set<String> listedPlayers = getPlayers();
 				
 				if (listedPlayers == null || listedPlayers.isEmpty()) {
-					player.sendMessage(ChatColor.YELLOW + "There are currently no players with abilities");
+					sender.sendMessage(ChatColor.YELLOW + "There are currently no players with abilities");
 					return true;
 				}
 				
-				player.sendMessage(ChatColor.GOLD + "Players with Abilities");
+				sender.sendMessage(ChatColor.GOLD + "Players with Abilities");
 				
 				for (String listedPlayer : listedPlayers) {
 					Set<String> playerAbilities = getPlayerAbilities(listedPlayer);
 					
-					player.sendMessage(ChatColor.BLUE + listedPlayer);
+					sender.sendMessage(ChatColor.BLUE + listedPlayer);
 					
 					if (playerAbilities != null) {
 						for (String listedAbility : playerAbilities) {
@@ -284,17 +278,17 @@ public class AbilityTrader extends JavaPlugin {
 							long expiresAt = getConfig().getLong(String.format("players.%s.%s.expires_at", listedPlayer, listedAbility), 0);
 							String timeRemaining = expiresAt == 0 ? "" : String.format("%s remaining", formatDuration(expiresAt - getUnixTime()));
 							
-							player.sendMessage(String.format(ChatColor.YELLOW + "%s -- %s", listedAbility, description));
+							sender.sendMessage(String.format(ChatColor.YELLOW + "%s -- %s", listedAbility, description));
 
 							// Only show when remaining time is a positive number - the task doesn't remove abilities at the exact moment of expiry
 							if ((expiresAt - getUnixTime()) > 0) {					
 								
 								if (timeRemaining != "") {
-									player.sendMessage(timeRemaining);
+									sender.sendMessage(timeRemaining);
 								}
 							} else {
 								if (timeRemaining != "") {
-									player.sendMessage("expired - pending removal");
+									sender.sendMessage("expired - pending removal");
 								}
 							}
 						}
@@ -303,22 +297,16 @@ public class AbilityTrader extends JavaPlugin {
 				
 				return true;
 			// Remove an ability from another player
-			} else if (perms.has(player, "abilitytrader.admin.remove") && command.equals("remove")) {
+			} else if (perms.has(sender, "abilitytrader.admin.remove") && command.equals("remove")) {
 				if (args.length < 3) {
-					player.sendMessage(ChatColor.YELLOW + "Please specify a player and ability to remove");
+					sender.sendMessage(ChatColor.RED + "Please specify a player and ability to remove");
 					return true;
 				}
 				
 				String removeFrom = args[1].toLowerCase();
 				String ability = args[2].toLowerCase();
 				
-				// Check this player exists
-				if (getServer().getPlayerExact(removeFrom) == null) {
-					player.sendMessage(ChatColor.RED + String.format("%s is not a player on this server", removeFrom));
-					return true;
-				}
-				
-				if (playerHasAbility(player.getName(), ability)) {
+				if (playerHasAbility(removeFrom, ability)) {
 					// Just remove it - don't run any post-removal commands
 					getConfig().set(String.format("players.%s.%s", removeFrom, ability), null);
 					
@@ -329,12 +317,12 @@ public class AbilityTrader extends JavaPlugin {
 						getConfig().set(String.format("players.%s", removeFrom), null);
 					}
 					
-					player.sendMessage(ChatColor.GREEN + String.format("The '%s' ability has been removed from '%s'!", ability, removeFrom));
+					sender.sendMessage(ChatColor.GREEN + String.format("The '%s' ability has been removed from %s!", ability, removeFrom));
 					saveConfig();
 					return true;
 				}
 				
-				player.sendMessage(ChatColor.YELLOW + String.format("%s doesn't have the '%s' ability", removeFrom, ability));
+				sender.sendMessage(ChatColor.YELLOW + String.format("%s doesn't have the '%s' ability", removeFrom, ability));
 				return true;
 			}
 			
@@ -342,11 +330,11 @@ public class AbilityTrader extends JavaPlugin {
 				Set<String> availableAbilities = getAvailableAbilities();
 				
 				if (availableAbilities == null) {
-					player.sendMessage(ChatColor.YELLOW + "There are no abilities available!");
+					sender.sendMessage(ChatColor.YELLOW + "There are no abilities available!");
 					return true;
 				}
 				
-				player.sendMessage(ChatColor.GOLD + "Available Abilities");
+				sender.sendMessage(ChatColor.GOLD + "Available Abilities");
 				
 				for (String ability : availableAbilities) {
 					String description = getConfig().getString(String.format("abilities.%s.description", ability), "No description");
@@ -354,49 +342,59 @@ public class AbilityTrader extends JavaPlugin {
 					Integer rentCost = getConfig().getInt(String.format("abilities.%s.rent_cost", ability), 0);
 					Integer buyCost = getConfig().getInt(String.format("abilities.%s.buy_cost", ability), 0);
 					
-					player.sendMessage(ChatColor.YELLOW + String.format("%s -- %s", ability, description));
+					sender.sendMessage(ChatColor.YELLOW + String.format("%s -- %s", ability, description));
 
 					// Figure out what type of cost this is
 					if (rentCost == 0 && buyCost != 0) {
-						player.sendMessage(String.format("%s to buy", econ.format(buyCost)));
+						sender.sendMessage(String.format("%s to buy", econ.format(buyCost)));
 					} else if (rentCost != 0 && buyCost == 0) {
-						player.sendMessage(String.format("%s to rent for %s", econ.format(rentCost), formatDuration(duration)));
+						sender.sendMessage(String.format("%s to rent for %s", econ.format(rentCost), formatDuration(duration)));
 					} else {
-						player.sendMessage(String.format("%s to buy or %s to rent for %s", econ.format(buyCost), econ.format(rentCost), formatDuration(duration)));
+						sender.sendMessage(String.format("%s to buy or %s to rent for %s", econ.format(buyCost), econ.format(rentCost), formatDuration(duration)));
 					}										
 				}
 			} else if (command.equals("info")) {
-				Set<String> playerAbilities = getPlayerAbilities(player.getName());
-				
-				if (playerAbilities == null || playerAbilities.isEmpty()) {
-					player.sendMessage(ChatColor.YELLOW + "You currently have no abilities");
+				if (!(sender instanceof Player)) {
+					sender.sendMessage(ChatColor.RED + "The console does not have any abilities");
 					return true;
 				}
 				
-				player.sendMessage(ChatColor.GOLD + "My Abilities");
+				Set<String> playerAbilities = getPlayerAbilities(sender.getName());
+				
+				if (playerAbilities == null || playerAbilities.isEmpty()) {
+					sender.sendMessage(ChatColor.YELLOW + "You currently have no abilities");
+					return true;
+				}
+				
+				sender.sendMessage(ChatColor.GOLD + "My Abilities");
 				
 				for (String ability : playerAbilities) {
 					String description = getConfig().getString(String.format("abilities.%s.description", ability), "No description");
-					long expiresAt = getConfig().getLong(String.format("players.%s.%s.expires_at", player.getName(), ability), 0);
+					long expiresAt = getConfig().getLong(String.format("players.%s.%s.expires_at", sender.getName(), ability), 0);
 					String timeRemaining = expiresAt == 0 ? "" : String.format("%s remaining", formatDuration(expiresAt - getUnixTime()));
 					
-					player.sendMessage(String.format(ChatColor.YELLOW + "%s -- %s", ability, description));
+					sender.sendMessage(String.format(ChatColor.YELLOW + "%s -- %s", ability, description));
 
 					// Only show when remaining time is a positive number - the task doesn't remove abilities at the exact moment of expiry
 					if ((expiresAt - getUnixTime()) > 0) {					
 						
 						if (timeRemaining != "") {
-							player.sendMessage(timeRemaining);
+							sender.sendMessage(timeRemaining);
 						}
 					} else {
 						if (timeRemaining != "") {
-							player.sendMessage("expired - pending removal");
+							sender.sendMessage("expired - pending removal");
 						}
 					}
 				}
 			} else if (command.equals("buy") || command.equals("rent")) {
+				if (!(sender instanceof Player)) {
+					sender.sendMessage(ChatColor.RED + "You can not buy or rent abilities via the console");
+					return true;
+				}
+				
 				if (args.length < 2) {
-					player.sendMessage(ChatColor.YELLOW + "Please specify an ability");
+					sender.sendMessage(ChatColor.YELLOW + "Please specify an ability");
 					return true;
 				}
 				
@@ -404,7 +402,7 @@ public class AbilityTrader extends JavaPlugin {
 				
 				// Check this ability exists
 				if (getConfig().getString(String.format("abilities.%s", requestedAbility)) == null) {
-					player.sendMessage(ChatColor.RED + "Ability not found - please check /ability list for available abilities");
+					sender.sendMessage(ChatColor.RED + "Ability not found - please check /ability list for available abilities");
 					return true;
 				}
 				
@@ -414,39 +412,39 @@ public class AbilityTrader extends JavaPlugin {
 				
 				// Check that the player has specified the correct purchase type
 				if (cost == 0) {
-					player.sendMessage(ChatColor.YELLOW + String.format("You can not %s this ability", purchaseType));
+					sender.sendMessage(ChatColor.YELLOW + String.format("You can not %s this ability", purchaseType));
 					return true;
 				}
 				
 				// Check the player doesn't already have this ability
-				if (getConfig().getString(String.format("players.%s.%s", player.getName(), requestedAbility)) != null) {
-					player.sendMessage(ChatColor.YELLOW + "You already have this ability!");
+				if (getConfig().getString(String.format("players.%s.%s", sender.getName(), requestedAbility)) != null) {
+					sender.sendMessage(ChatColor.YELLOW + "You already have this ability!");
 					return true;
 				}
 				
 				// Attempt to purchase this ability
-				if (econ.getBalance(player.getName()) >= cost) {
-					EconomyResponse r = econ.withdrawPlayer(player.getName(), cost);
+				if (econ.getBalance(sender.getName()) >= cost) {
+					EconomyResponse r = econ.withdrawPlayer(sender.getName(), cost);
 					
 					if (r.transactionSuccess()) {
-						if (givePlayerAbility(player, requestedAbility, purchaseType.equals("rent"))) {
-							player.sendMessage(ChatColor.GOLD + String.format("You have been given the '%s' ability!", requestedAbility));
+						if (givePlayerAbility(sender, requestedAbility, purchaseType.equals("rent"))) {
+							sender.sendMessage(ChatColor.GOLD + String.format("You have been given the '%s' ability!", requestedAbility));
 						} else {
-							econ.depositPlayer(player.getName(), cost);
-							player.sendMessage(ChatColor.RED + "Sorry, something went wrong. You have been refunded");
+							econ.depositPlayer(sender.getName(), cost);
+							sender.sendMessage(ChatColor.RED + "Sorry, something went wrong. You have been refunded");
 						}
 					} else {
-						player.sendMessage(ChatColor.RED + "Sorry, something went wrong. No money has been taken");
+						sender.sendMessage(ChatColor.RED + "Sorry, something went wrong. No money has been taken");
 					}
 				} else {
-					player.sendMessage(ChatColor.YELLOW + String.format("You do not have enough money to %s this ability!", purchaseType));
+					sender.sendMessage(ChatColor.YELLOW + String.format("You do not have enough money to %s this ability!", purchaseType));
 				}
 			} else {
-				player.sendMessage(ChatColor.GOLD + "Ability Trader Commands");
-				player.sendMessage("/ability info -- Show which abilities you have");
-				player.sendMessage("/ability list -- List available abilities");
-				player.sendMessage("/ability buy <ability> -- Buy <ability>");
-				player.sendMessage("/ability rent <ability> -- Rent <ability>");
+				sender.sendMessage(ChatColor.GOLD + "Ability Trader Commands");
+				sender.sendMessage("/ability info -- Show which abilities you have");
+				sender.sendMessage("/ability list -- List available abilities");
+				sender.sendMessage("/ability buy <ability> -- Buy <ability>");
+				sender.sendMessage("/ability rent <ability> -- Rent <ability>");
 			}
 		}
 		
