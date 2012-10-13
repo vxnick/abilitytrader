@@ -154,6 +154,29 @@ public class AbilityTrader extends JavaPlugin {
 							}
 						}
 						
+						// Move the player to a given group
+						String currentGroup = perms.getPrimaryGroup((String) null, player);
+						String newGroup = getConfig().getString(String.format("abilities.%s.groups.remove", ability));
+						
+						if (newGroup != null) {
+							// Check if this is their previous group
+							String finalNewGroup = null;
+							if (newGroup.equals("PREVIOUS_GROUP")) {
+								String previousGroup = getConfig().getString(String.format("players.%s.%s.previous_group", player, ability));
+								
+								if (previousGroup == null) {
+									finalNewGroup = newGroup;
+								} else {
+									finalNewGroup = previousGroup;
+								}
+							} else {
+								finalNewGroup = newGroup;
+							}
+							
+							perms.playerRemoveGroup((String) null, player, currentGroup);
+							perms.playerAddGroup((String) null, player, finalNewGroup);
+						}
+						
 						// Get a list of commands to be run for the current player ability
 						List<String> commands = getConfig().getStringList(String.format("abilities.%s.commands.remove", ability));
 						
@@ -202,6 +225,16 @@ public class AbilityTrader extends JavaPlugin {
 					perms.playerAdd((String) null, player.getName(), permission);
 				}
 			}
+		}
+		
+		// Move the player to a given group
+		String newGroup = getConfig().getString(String.format("abilities.%s.groups.add", ability));
+		
+		if (newGroup != null) {
+			// Set current (old) group
+			getConfig().set(String.format("players.%s.%s.previous_group", player.getName(), ability), 
+					perms.getPrimaryGroup((String) null, player.getName()));
+			perms.playerAddGroup((String) null, player.getName(), newGroup);
 		}
 				
 		// Get a list of commands to be run for the given ability
@@ -331,6 +364,29 @@ public class AbilityTrader extends JavaPlugin {
 				if (playerHasAbility(removeFrom, ability)) {
 					// Just remove it - don't run any post-removal commands
 					getConfig().set(String.format("players.%s.%s", removeFrom, ability), null);
+					
+					// Move the player to a given group
+					String currentGroup = perms.getPrimaryGroup((String) null, removeFrom);
+					String newGroup = getConfig().getString(String.format("abilities.%s.groups.remove", ability));
+					
+					if (newGroup != null) {
+						// Check if this is their previous group
+						String finalNewGroup = null;
+						if (newGroup.equals("PREVIOUS_GROUP")) {
+							String previousGroup = getConfig().getString(String.format("players.%s.%s.previous_group", removeFrom, ability));
+							
+							if (previousGroup == null) {
+								finalNewGroup = newGroup;
+							} else {
+								finalNewGroup = previousGroup;
+							}
+						} else {
+							finalNewGroup = newGroup;
+						}
+						
+						perms.playerRemoveGroup((String) null, removeFrom, currentGroup);
+						perms.playerAddGroup((String) null, removeFrom, finalNewGroup);
+					}
 					
 					// Remove this player's section if they have no other abilities
 					Set<String> removeFromAbilities = getPlayerAbilities(removeFrom);
