@@ -129,7 +129,6 @@ public class AbilityTrader extends JavaPlugin {
 	 * This is called by the async task every minute by default.
 	 */
 	private void removeExpiredPlayerAbilities() {
-		// TODO: Remove empty players
 		Set<String> players = getPlayers();
 		
 		if (players == null) {
@@ -152,16 +151,6 @@ public class AbilityTrader extends JavaPlugin {
 							if (perms.has((String) null, player, permission)) {
 								// Apply this to all worlds
 								perms.playerRemove((String) null, player, permission);
-								
-								// Remove the player ability
-								getConfig().set(String.format("players.%s.%s", player, ability), null);
-								
-								// Remove this player's section if they have no other abilities
-								Set<String> removeFromAbilities = getPlayerAbilities(player);
-								
-								if (removeFromAbilities == null || removeFromAbilities.isEmpty()) {
-									getConfig().set(String.format("players.%s", player), null);
-								}
 							}
 						}
 						
@@ -169,10 +158,27 @@ public class AbilityTrader extends JavaPlugin {
 						List<String> commands = getConfig().getStringList(String.format("abilities.%s.commands.remove", ability));
 						
 						if (commands != null) {
+							// Get some ability attributes that commands can use
+							Integer rentCost = getConfig().getInt(String.format("abilities.%s.rent_cost", ability), 0);
+							Integer buyCost = getConfig().getInt(String.format("abilities.%s.buy_cost", ability), 0);
+							String purchaseType = getConfig().getString(String.format("players.%s.%s.purchase_type", player, ability), "buy");
+							Integer cost = purchaseType.equals("rent") ? rentCost : buyCost;
+							
 							for (String command : commands) {
 								// Run the command
-								getServer().dispatchCommand(getServer().getConsoleSender(), MessageFormat.format(command, player));
+								getServer().dispatchCommand(getServer().getConsoleSender(), MessageFormat.format(command, player, 
+										ability, cost, econ.format(cost)));
 							}
+						}
+						
+						// Remove the player ability
+						getConfig().set(String.format("players.%s.%s", player, ability), null);
+						
+						// Remove this player's section if they have no other abilities
+						Set<String> removeFromAbilities = getPlayerAbilities(player);
+						
+						if (removeFromAbilities == null || removeFromAbilities.isEmpty()) {
+							getConfig().set(String.format("players.%s", player), null);
 						}
 						
 						getLogger().log(Level.INFO, String.format("Removed the expired '%s' ability from %s", ability, player));
@@ -188,26 +194,37 @@ public class AbilityTrader extends JavaPlugin {
 		// Get a list of permissions for the given ability
 		List<String> permissions = getConfig().getStringList(String.format("abilities.%s.permissions", ability));
 		
-		for (String permission : permissions) {
-			// Add the permission if the player doesn't already have it
-			if (!perms.has(player, permission)) {
-				// Apply this to all worlds
-				perms.playerAdd((String) null, player.getName(), permission);
+		if (permissions != null) {
+			for (String permission : permissions) {
+				// Add the permission if the player doesn't already have it
+				if (!perms.has(player, permission)) {
+					// Apply this to all worlds
+					perms.playerAdd((String) null, player.getName(), permission);
+				}
 			}
 		}
-		
+				
 		// Get a list of commands to be run for the given ability
 		List<String> commands = getConfig().getStringList(String.format("abilities.%s.commands.add", ability));
 		
 		if (commands != null) {
+			// Get some ability attributes that commands can use
+			Integer rentCost = getConfig().getInt(String.format("abilities.%s.rent_cost", ability), 0);
+			Integer buyCost = getConfig().getInt(String.format("abilities.%s.buy_cost", ability), 0);
+			Integer cost = (rented) ? rentCost : buyCost;
+
 			for (String command : commands) {
 				// Run the command
-				getServer().dispatchCommand(getServer().getConsoleSender(), MessageFormat.format(command, player.getName()));
+				getServer().dispatchCommand(getServer().getConsoleSender(), MessageFormat.format(command, player.getName(), 
+						ability, cost, econ.format(cost)));
 			}
 		}
 		
+		// Set whether it was bought or rented
+		getConfig().set(String.format("players.%s.%s.purchase_type", player.getName(), ability), (rented ? "rent" : "buy"));
+		
 		// Record this player's abilities in the configuration
-		getConfig().set(String.format("players.%s.%s.given_at", player.getName(), ability), System.currentTimeMillis() / 1000L);
+		getConfig().set(String.format("players.%s.%s.given_at", player.getName(), ability), getUnixTime());
 		
 		// Set duration (expiry) for this ability if rented
 		if (rented) {
