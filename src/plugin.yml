@@ -1,6 +1,6 @@
 name: AbilityTrader
 main: com.vxnick.abilitytrader.AbilityTrader
-version: 0.5.0
+version: 0.6.0
 description: Allows abilities (commands and permissions) to be purchased or rented.
 author: vxnick
 website: http://github.com/vxnick/abilitytrader

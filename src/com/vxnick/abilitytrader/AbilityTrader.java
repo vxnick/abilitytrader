@@ -1,6 +1,7 @@
 package com.vxnick.abilitytrader;
 
 import java.text.MessageFormat;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
@@ -177,22 +178,8 @@ public class AbilityTrader extends JavaPlugin {
 							perms.playerAddGroup((String) null, player, finalNewGroup);
 						}
 						
-						// Get a list of commands to be run for the current player ability
-						List<String> commands = getConfig().getStringList(String.format("abilities.%s.commands.remove", ability));
-						
-						if (commands != null) {
-							// Get some ability attributes that commands can use
-							Integer rentCost = getConfig().getInt(String.format("abilities.%s.rent_cost", ability), 0);
-							Integer buyCost = getConfig().getInt(String.format("abilities.%s.buy_cost", ability), 0);
-							String purchaseType = getConfig().getString(String.format("players.%s.%s.purchase_type", player, ability), "buy");
-							Integer cost = purchaseType.equals("rent") ? rentCost : buyCost;
-							
-							for (String command : commands) {
-								// Run the command
-								getServer().dispatchCommand(getServer().getConsoleSender(), MessageFormat.format(command, player, 
-										ability, cost, econ.format(cost)));
-							}
-						}
+						String purchaseType = getConfig().getString(String.format("players.%s.%s.purchase_type", player, ability), null);
+						runCommands("remove", player, ability, purchaseType.equals("rent"));
 						
 						// Remove the player ability
 						getConfig().set(String.format("players.%s.%s", player, ability), null);
@@ -211,6 +198,27 @@ public class AbilityTrader extends JavaPlugin {
 		}
 		
 		saveConfig();
+	}
+	
+	private void runCommands(String type, String player, String ability, boolean rented) {
+		List<String> commandSections = Arrays.asList("global", String.format("abilities.%s", ability));
+		
+		for (String commandSection : commandSections) {
+			List<String> commands = getConfig().getStringList(String.format("%s.commands.%s", commandSection, type));
+			
+			if (commands != null) {
+				// Get some ability attributes that commands can use
+				Integer rentCost = getConfig().getInt(String.format("abilities.%s.rent_cost", ability), 0);
+				Integer buyCost = getConfig().getInt(String.format("abilities.%s.buy_cost", ability), 0);
+				Integer cost = (rented) ? rentCost : buyCost;
+				
+				for (String command : commands) {
+					// Run the command
+					getServer().dispatchCommand(getServer().getConsoleSender(), MessageFormat.format(command, player, 
+							ability, cost, econ.format(cost)));
+				}
+			}
+		}
 	}
 	
 	private boolean givePlayerAbility(CommandSender player, String ability, boolean rented) {
@@ -236,22 +244,8 @@ public class AbilityTrader extends JavaPlugin {
 					perms.getPrimaryGroup((String) null, player.getName()));
 			perms.playerAddGroup((String) null, player.getName(), newGroup);
 		}
-				
-		// Get a list of commands to be run for the given ability
-		List<String> commands = getConfig().getStringList(String.format("abilities.%s.commands.add", ability));
 		
-		if (commands != null) {
-			// Get some ability attributes that commands can use
-			Integer rentCost = getConfig().getInt(String.format("abilities.%s.rent_cost", ability), 0);
-			Integer buyCost = getConfig().getInt(String.format("abilities.%s.buy_cost", ability), 0);
-			Integer cost = (rented) ? rentCost : buyCost;
-
-			for (String command : commands) {
-				// Run the command
-				getServer().dispatchCommand(getServer().getConsoleSender(), MessageFormat.format(command, player.getName(), 
-						ability, cost, econ.format(cost)));
-			}
-		}
+		runCommands("add", player.getName(), ability, rented);
 		
 		// Set whether it was bought or rented
 		getConfig().set(String.format("players.%s.%s.purchase_type", player.getName(), ability), (rented ? "rent" : "buy"));

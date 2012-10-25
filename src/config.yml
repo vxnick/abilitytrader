@@ -1,3 +1,7 @@
+global:
+  commands:
+    add: []
+    remove: []
 abilities:
   workbench:
     description: No need for real workbenches any more!
