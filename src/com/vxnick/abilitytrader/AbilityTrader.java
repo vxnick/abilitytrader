@@ -359,6 +359,17 @@ public class AbilityTrader extends JavaPlugin {
 					// Just remove it - don't run any post-removal commands
 					getConfig().set(String.format("players.%s.%s", removeFrom, ability), null);
 					
+					// Get a list of permissions for the current player ability
+					List<String> permissions = getConfig().getStringList(String.format("abilities.%s.permissions", ability));
+					
+					for (String permission : permissions) {
+						// Remove the permission if the player has it
+						if (perms.has((String) null, removeFrom, permission)) {
+							// Apply this to all worlds
+							perms.playerRemove((String) null, removeFrom, permission);
+						}
+					}
+					
 					// Move the player to a given group
 					String currentGroup = perms.getPrimaryGroup((String) null, removeFrom);
 					String newGroup = getConfig().getString(String.format("abilities.%s.groups.remove", ability));
