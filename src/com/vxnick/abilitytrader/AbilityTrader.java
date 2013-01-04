@@ -483,7 +483,7 @@ public class AbilityTrader extends JavaPlugin {
 					return true;
 				}
 				
-				String requestedAbility = args[1].toLowerCase();
+				String requestedAbility = args[1];
 				
 				// Check this ability exists
 				if (getConfig().getString(String.format("abilities.%s", requestedAbility)) == null) {
