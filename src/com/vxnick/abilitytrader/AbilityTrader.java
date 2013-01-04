@@ -33,7 +33,7 @@ public class AbilityTrader extends JavaPlugin {
 		saveDefaultConfig();
 		
 		// Schedule removal of expired player abilities every minute
-		getServer().getScheduler().scheduleAsyncRepeatingTask(this, new Runnable() {
+		getServer().getScheduler().runTaskTimerAsynchronously(this, new Runnable() {
 			public void run() {
 				removeExpiredPlayerAbilities();
 			}
