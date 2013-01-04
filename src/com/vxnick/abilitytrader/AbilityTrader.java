@@ -493,10 +493,10 @@ public class AbilityTrader extends JavaPlugin {
 				
 				// Get type of purchase (rent or buy) and its price
 				String purchaseType = command.equals("rent") ? "rent" : "buy";
-				Integer cost = getConfig().getInt(String.format("abilities.%s.%s_cost", requestedAbility, purchaseType), 0);
+				Integer cost = getConfig().getInt(String.format("abilities.%s.%s_cost", requestedAbility, purchaseType), -1);
 				
 				// Check that the player has specified the correct purchase type
-				if (cost == 0) {
+				if (cost == -1) {
 					sender.sendMessage(ChatColor.YELLOW + String.format("You can not %s this ability", purchaseType));
 					return true;
 				}
