@@ -28,4 +28,5 @@ abilities:
     permissions:
       - essentials.hat
     buy_cost: 1000
+    hidden: true
 players: []

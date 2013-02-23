@@ -468,36 +468,40 @@ public class AbilityTrader extends JavaPlugin {
 					Integer rentExp = getConfig().getInt(String.format("abilities.%s.rent_exp", ability), -1);
 					Integer buyExp = getConfig().getInt(String.format("abilities.%s.buy_exp", ability), -1);
 					
-					sender.sendMessage(ChatColor.YELLOW + String.format("%s -- %s", ability, description));
+					boolean isHidden = getConfig().getBoolean(String.format("abilities.%s.hidden", ability), false);
 					
-					boolean is_exp;
+					if (perms.has(sender, "abilitytrader.showhidden") || !isHidden) {
+						sender.sendMessage(ChatColor.YELLOW + String.format("%s -- %s", ability, description));
 					
-					// Is this money or experience?
-					if (rentMoney == -1 && buyMoney == -1) {
-						is_exp = true;
-					} else if (rentExp == -1 && buyExp == -1) {
-						is_exp = false;
-					} else {
-						is_exp = false;
+						boolean is_exp;
+						
+						// Is this money or experience?
+						if (rentMoney == -1 && buyMoney == -1) {
+							is_exp = true;
+						} else if (rentExp == -1 && buyExp == -1) {
+							is_exp = false;
+						} else {
+							is_exp = false;
+						}
+						
+						if (is_exp) {
+							if (rentExp == -1 && buyExp >= 0) {
+								sender.sendMessage(String.format("%s to buy", buyExp + " exp"));
+							} else if (rentExp >= 0 && buyExp == -1) {
+								sender.sendMessage(String.format("%s to rent for %s", rentExp + " exp", formatDuration(duration)));
+							} else {
+								sender.sendMessage(String.format("%s to buy or %s to rent for %s", buyExp + " exp", rentExp + " exp", formatDuration(duration)));
+							}
+						} else {
+							if (rentMoney == -1 && buyMoney >= 0) {
+								sender.sendMessage(String.format("%s to buy", econ.format(buyMoney)));
+							} else if (rentMoney >= 0 && buyMoney == -1) {
+								sender.sendMessage(String.format("%s to rent for %s", econ.format(rentMoney), formatDuration(duration)));
+							} else {
+								sender.sendMessage(String.format("%s to buy or %s to rent for %s", econ.format(buyMoney), econ.format(rentMoney), formatDuration(duration)));
+							}
+						}
 					}
-					
-					if (is_exp) {
-						if (rentExp == -1 && buyExp >= 0) {
-							sender.sendMessage(String.format("%s to buy", buyExp + " exp"));
-						} else if (rentExp >= 0 && buyExp == -1) {
-							sender.sendMessage(String.format("%s to rent for %s", rentExp + " exp", formatDuration(duration)));
-						} else {
-							sender.sendMessage(String.format("%s to buy or %s to rent for %s", buyExp + " exp", rentExp + " exp", formatDuration(duration)));
-						}						
-					} else {
-						if (rentMoney == -1 && buyMoney >= 0) {
-							sender.sendMessage(String.format("%s to buy", econ.format(buyMoney)));
-						} else if (rentMoney >= 0 && buyMoney == -1) {
-							sender.sendMessage(String.format("%s to rent for %s", econ.format(rentMoney), formatDuration(duration)));
-						} else {
-							sender.sendMessage(String.format("%s to buy or %s to rent for %s", econ.format(buyMoney), econ.format(rentMoney), formatDuration(duration)));
-						}						
-					}					
 				}
 			} else if (command.equals("info")) {
 				if (!(sender instanceof Player)) {
@@ -517,21 +521,124 @@ public class AbilityTrader extends JavaPlugin {
 				for (String ability : playerAbilities) {
 					String description = getConfig().getString(String.format("abilities.%s.description", ability), "No description");
 					long expiresAt = getConfig().getLong(String.format("players.%s.%s.expires_at", sender.getName(), ability), 0);
+					boolean isHidden = getConfig().getBoolean(String.format("abilities.%s.hidden", ability), false);
+					
 					String timeRemaining = expiresAt == 0 ? "" : String.format("%s remaining", formatDuration(expiresAt - getUnixTime()));
 					
-					sender.sendMessage(String.format(ChatColor.YELLOW + "%s -- %s", ability, description));
-
-					// Only show when remaining time is a positive number - the task doesn't remove abilities at the exact moment of expiry
-					if ((expiresAt - getUnixTime()) > 0) {					
-						
-						if (timeRemaining != "") {
-							sender.sendMessage(timeRemaining);
-						}
-					} else {
-						if (timeRemaining != "") {
-							sender.sendMessage("expired - pending removal");
+					if (perms.has(sender, "abilitytrader.showhidden") || !isHidden) {
+						sender.sendMessage(String.format(ChatColor.YELLOW + "%s -- %s", ability, description));
+	
+						// Only show when remaining time is a positive number - the task doesn't remove abilities at the exact moment of expiry
+						if ((expiresAt - getUnixTime()) > 0) {					
+							
+							if (timeRemaining != "") {
+								sender.sendMessage(timeRemaining);
+							}
+						} else {
+							if (timeRemaining != "") {
+								sender.sendMessage("expired - pending removal");
+							}
 						}
 					}
+				}
+			} else if (perms.has(sender, "abilitytrader.admin.add") && command.equals("add")) {
+				if (args.length < 5) {
+					sender.sendMessage(ChatColor.RED + "Please specify a player, type (rent or buy), ability to add and true/false to charge them");
+					return true;
+				}
+				
+				String addTo = args[1].toLowerCase();
+				String type = args[2].toLowerCase();
+				String requestedAbility = args[3].toLowerCase();
+				boolean isFree = (args[4].toLowerCase().equals("false")) ? true : false;
+				
+				// Check this ability exists
+				if (getConfig().getString(String.format("abilities.%s", requestedAbility)) == null) {
+					sender.sendMessage(ChatColor.RED + "Ability not found - please check /ability list for available abilities");
+					return true;
+				}
+				
+				ExperienceManager em = new ExperienceManager(getServer().getPlayer(addTo));
+				
+				if (!playerHasAbility(addTo, requestedAbility)) {
+					// Get type of purchase (rent or buy) and its price
+					String purchaseType = type.equals("rent") ? "rent" : "buy";
+					Integer money = getConfig().getInt(String.format("abilities.%s.%s_cost", requestedAbility, purchaseType), -1);
+					Integer exp = getConfig().getInt(String.format("abilities.%s.%s_exp", requestedAbility, purchaseType), -1);
+					
+					// Is the player spending money or experience?
+					boolean is_exp;
+					Integer cost;
+					
+					if (money == -1 && exp >= 0) {
+						// They're spending experience
+						is_exp = true;
+						cost = exp;
+					} else if (money >= 0 && exp == -1) {
+						// They're spending money
+						is_exp = false;
+						cost = money;
+					} else if (money == -1 && exp == -1) {
+						// Neither are specified
+						sender.sendMessage(ChatColor.YELLOW + String.format("You can not %s this ability", purchaseType));
+						return true;
+					} else {
+						// Anything else will be free, so do nothing
+						is_exp = false;
+						cost = money;
+					}
+					
+					if (is_exp) {
+						if (isFree) {
+							if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"))) {
+								sender.sendMessage(ChatColor.GOLD + String.format("You have given the '%s' ability!", requestedAbility));
+							} else {
+								sender.sendMessage(ChatColor.RED + "Sorry, something went wrong");
+							}
+						} else {
+							// Purchase with experience
+							if (em.hasExp(cost)) {
+								em.changeExp(-cost);
+								
+								if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"))) {
+									sender.sendMessage(ChatColor.GOLD + String.format("You have given the '%s' ability!", requestedAbility));
+								} else {
+									em.changeExp(cost);
+									sender.sendMessage(ChatColor.RED + "Sorry, something went wrong");
+								}
+							} else {
+								sender.sendMessage(ChatColor.YELLOW + String.format("%s does not have enough experience to %s this ability!", addTo, purchaseType));
+							}
+						}
+					} else {
+						if (isFree) {
+							if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"))) {
+								sender.sendMessage(ChatColor.GOLD + String.format("You have given the '%s' ability!", requestedAbility));
+							} else {
+								sender.sendMessage(ChatColor.RED + "Sorry, something went wrong");
+							}
+						} else {
+							// Attempt to purchase this ability
+							if (econ.getBalance(addTo) >= cost) {
+								EconomyResponse r = econ.withdrawPlayer(addTo, cost);
+								
+								if (r.transactionSuccess()) {
+									if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"))) {
+										sender.sendMessage(ChatColor.GOLD + String.format("You have given the '%s' ability!", requestedAbility));
+									} else {
+										econ.depositPlayer(addTo, cost);
+										sender.sendMessage(ChatColor.RED + "Sorry, something went wrong");
+									}
+								} else {
+									sender.sendMessage(ChatColor.RED + "Sorry, something went wrong. No money has been taken");
+								}
+							} else {
+								sender.sendMessage(ChatColor.YELLOW + String.format("%s does not have enough money to %s this ability!", addTo, purchaseType));
+							}
+						}
+					}
+				} else {
+					sender.sendMessage(ChatColor.YELLOW + String.format("%s already has the %s ability", addTo, requestedAbility));
 				}
 			} else if (command.equals("buy") || command.equals("rent")) {
 				if (!(sender instanceof Player)) {
@@ -548,6 +655,12 @@ public class AbilityTrader extends JavaPlugin {
 				
 				// Check this ability exists
 				if (getConfig().getString(String.format("abilities.%s", requestedAbility)) == null) {
+					sender.sendMessage(ChatColor.RED + "Ability not found - please check /ability list for available abilities");
+					return true;
+				}
+				
+				// Check if this is a hidden ability
+				if (getConfig().getBoolean(String.format("abilities.%s.hidden", requestedAbility), false) == true && !perms.has(sender, "abilitytrader.showhidden")) {
 					sender.sendMessage(ChatColor.RED + "Ability not found - please check /ability list for available abilities");
 					return true;
 				}
