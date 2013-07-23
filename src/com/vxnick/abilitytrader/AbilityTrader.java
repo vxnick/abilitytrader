@@ -143,7 +143,7 @@ public class AbilityTrader extends JavaPlugin {
 				for (String ability : playerAbilities) {
 					long expiresAt = getConfig().getLong(String.format("players.%s.%s.expires_at", player, ability), 0);
 
-					if (expiresAt > 0 && expiresAt < getUnixTime()) {
+					if ((expiresAt > 0 && expiresAt < getUnixTime()) && getServer().getOfflinePlayer(player).isOnline()) {
 						// Get a list of permissions for the current player ability
 						List<String> permissions = getConfig().getStringList(String.format("abilities.%s.permissions", ability));
 						
@@ -392,6 +392,12 @@ public class AbilityTrader extends JavaPlugin {
 				String removeFrom = args[1].toLowerCase();
 				String ability = args[2].toLowerCase();
 				
+				// Is the player online?
+				if (!getServer().getOfflinePlayer(removeFrom).isOnline()) {
+					sender.sendMessage(ChatColor.RED + "You can't remove this ability as the player is offline");
+					return true;
+				}
+				
 				if (playerHasAbility(removeFrom, ability)) {
 					// Just remove it - don't run any post-removal commands
 					getConfig().set(String.format("players.%s.%s", removeFrom, ability), null);
@@ -551,6 +557,12 @@ public class AbilityTrader extends JavaPlugin {
 				String type = args[2].toLowerCase();
 				String requestedAbility = args[3].toLowerCase();
 				boolean isFree = (args[4].toLowerCase().equals("false")) ? true : false;
+				
+				// Is this player online?
+				if (!getServer().getOfflinePlayer(addTo).isOnline()) {
+					sender.sendMessage(ChatColor.RED + "You can't add this ability because the player is offline");
+					return true;
+				}
 				
 				// Check this ability exists
 				if (getConfig().getString(String.format("abilities.%s", requestedAbility)) == null) {
