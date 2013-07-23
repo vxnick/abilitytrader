@@ -258,7 +258,7 @@ public class AbilityTrader extends JavaPlugin {
 		}
 	}
 	
-	private boolean givePlayerAbility(CommandSender player, String ability, boolean rented) {
+	private boolean givePlayerAbility(CommandSender player, String ability, boolean rented, String givenBy) {
 		// Get a list of permissions for the given ability
 		List<String> permissions = getConfig().getStringList(String.format("abilities.%s.permissions", ability));
 		
@@ -297,7 +297,12 @@ public class AbilityTrader extends JavaPlugin {
 		}
 		
 		String word = (rented) ? "rented" : "bought";
-		getLogger().log(Level.INFO, String.format("%s has %s the '%s' ability", player.getName(), word, ability));
+		
+		if (givenBy != null) {
+			logMessage(String.format("%s has given %s the '%s' ability", givenBy, player.getName(), ability));
+		} else {
+			logMessage(String.format("%s has %s the '%s' ability", player.getName(), word, ability));
+		}
 		
 		saveConfig();
 		return true;
@@ -608,8 +613,8 @@ public class AbilityTrader extends JavaPlugin {
 					
 					if (is_exp) {
 						if (isFree) {
-							if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"))) {
-								sender.sendMessage(ChatColor.GOLD + String.format("You have given the '%s' ability!", requestedAbility));
+							if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"), sender.getName())) {
+								sender.sendMessage(ChatColor.GOLD + String.format("You have given %s the '%s' ability!", addTo, requestedAbility));
 							} else {
 								sender.sendMessage(ChatColor.RED + "Sorry, something went wrong");
 							}
@@ -618,8 +623,8 @@ public class AbilityTrader extends JavaPlugin {
 							if (em.hasExp(cost)) {
 								em.changeExp(-cost);
 								
-								if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"))) {
-									sender.sendMessage(ChatColor.GOLD + String.format("You have given the '%s' ability!", requestedAbility));
+								if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"), sender.getName())) {
+									sender.sendMessage(ChatColor.GOLD + String.format("You have given %s the '%s' ability!", addTo, requestedAbility));
 								} else {
 									em.changeExp(cost);
 									sender.sendMessage(ChatColor.RED + "Sorry, something went wrong");
@@ -630,8 +635,8 @@ public class AbilityTrader extends JavaPlugin {
 						}
 					} else {
 						if (isFree) {
-							if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"))) {
-								sender.sendMessage(ChatColor.GOLD + String.format("You have given the '%s' ability!", requestedAbility));
+							if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"), sender.getName())) {
+								sender.sendMessage(ChatColor.GOLD + String.format("You have given %s the '%s' ability!", addTo, requestedAbility));
 							} else {
 								sender.sendMessage(ChatColor.RED + "Sorry, something went wrong");
 							}
@@ -641,8 +646,8 @@ public class AbilityTrader extends JavaPlugin {
 								EconomyResponse r = econ.withdrawPlayer(addTo, cost);
 								
 								if (r.transactionSuccess()) {
-									if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"))) {
-										sender.sendMessage(ChatColor.GOLD + String.format("You have given the '%s' ability!", requestedAbility));
+									if (givePlayerAbility(getServer().getPlayer(addTo), requestedAbility, purchaseType.equals("rent"), sender.getName())) {
+										sender.sendMessage(ChatColor.GOLD + String.format("You have given %s the '%s' ability!", addTo, requestedAbility));
 									} else {
 										econ.depositPlayer(addTo, cost);
 										sender.sendMessage(ChatColor.RED + "Sorry, something went wrong");
@@ -723,7 +728,7 @@ public class AbilityTrader extends JavaPlugin {
 					if (em.hasExp(cost)) {
 						em.changeExp(-cost);
 						
-						if (givePlayerAbility(sender, requestedAbility, purchaseType.equals("rent"))) {
+						if (givePlayerAbility(sender, requestedAbility, purchaseType.equals("rent"), null)) {
 							sender.sendMessage(ChatColor.GOLD + String.format("You have been given the '%s' ability!", requestedAbility));
 						} else {
 							em.changeExp(cost);
@@ -738,7 +743,7 @@ public class AbilityTrader extends JavaPlugin {
 						EconomyResponse r = econ.withdrawPlayer(sender.getName(), cost);
 						
 						if (r.transactionSuccess()) {
-							if (givePlayerAbility(sender, requestedAbility, purchaseType.equals("rent"))) {
+							if (givePlayerAbility(sender, requestedAbility, purchaseType.equals("rent"), null)) {
 								sender.sendMessage(ChatColor.GOLD + String.format("You have been given the '%s' ability!", requestedAbility));
 							} else {
 								econ.depositPlayer(sender.getName(), cost);
