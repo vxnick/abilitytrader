@@ -191,7 +191,7 @@ public class AbilityTrader extends JavaPlugin {
 							getConfig().set(String.format("players.%s", player), null);
 						}
 						
-						getLogger().log(Level.INFO, String.format("Removed the expired '%s' ability from %s", ability, player));
+						logMessage(String.format("Removed the expired '%s' ability from %s", ability, player));
 					}
 				}
 			}
@@ -325,6 +325,12 @@ public class AbilityTrader extends JavaPlugin {
 		}
 	}
 	
+	private void logMessage(String message) {
+		if (getConfig().getBoolean("log", false)) {
+			getLogger().log(Level.INFO, message);
+		}
+	}
+	
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("ability")) {
 			if (!perms.has(sender, "abilitytrader.use")) {
@@ -444,7 +450,7 @@ public class AbilityTrader extends JavaPlugin {
 					}
 					
 					sender.sendMessage(ChatColor.GREEN + String.format("The '%s' ability has been removed from %s!", ability, removeFrom));
-					getLogger().log(Level.INFO, String.format("%s has removed the '%s' ability from %s", sender.getName(), ability, removeFrom));
+					logMessage(String.format("%s has removed the '%s' ability from %s", sender.getName(), ability, removeFrom));
 					
 					saveConfig();
 					return true;
