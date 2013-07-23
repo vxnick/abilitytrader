@@ -751,6 +751,22 @@ public class AbilityTrader extends JavaPlugin {
 				sender.sendMessage("/ability list -- List available abilities");
 				sender.sendMessage("/ability buy <ability> -- Buy <ability>");
 				sender.sendMessage("/ability rent <ability> -- Rent <ability>");
+				
+				if (perms.has(sender, "abilitytrader.admin.players")) {
+					sender.sendMessage("/ability players -- List players and their abilities");
+				}
+				
+				if (perms.has(sender, "abilitytrader.admin.add")) {
+					sender.sendMessage("/ability add <player> <rent|buy> <ability> <true|false> -- Add an ability to a player");
+				}
+				
+				if (perms.has(sender, "abilitytrader.admin.remove")) {
+					sender.sendMessage("/ability remove <player> <ability> -- Remove an ability from a player");
+				}
+				
+				if (perms.has(sender, "abilitytrader.admin.reload")) {
+					sender.sendMessage("/ability reload -- Reload the configuration");
+				}
 			}
 		}
 		
