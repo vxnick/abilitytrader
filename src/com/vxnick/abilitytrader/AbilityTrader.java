@@ -4,6 +4,9 @@ import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 
 import net.milkbowl.vault.economy.Economy;
@@ -336,6 +339,27 @@ public class AbilityTrader extends JavaPlugin {
 		}
 	}
 	
+	public void paginate(CommandSender sender, SortedMap<Integer, String> map, int page, int pageLength) {
+		int maxPages = (((map.size() % pageLength) == 0) ? map.size() / pageLength : (map.size() / pageLength) + 1);
+		
+		if (page > maxPages) {
+			page = maxPages;
+		}
+		
+	    sender.sendMessage(ChatColor.YELLOW + "Page " + String.valueOf(page) + " of " + maxPages + ChatColor.RESET);
+	    
+	    int i = 0, k = 0;
+	    page--;
+	    
+	    for (final Entry<Integer, String> e : map.entrySet()) {
+	        k++;
+	        if ((((page * pageLength) + i + 1) == k) && (k != ((page * pageLength) + pageLength + 1))) {
+	            i++;
+	            sender.sendMessage(e.getValue().toString());
+	        }
+	    }
+	}
+	
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("ability")) {
 			if (!perms.has(sender, "abilitytrader.use")) {
@@ -362,12 +386,14 @@ public class AbilityTrader extends JavaPlugin {
 					return true;
 				}
 				
-				sender.sendMessage(ChatColor.GOLD + "Players with Abilities");
+				SortedMap<Integer, String> map = new TreeMap<Integer, String>();
+				int i = 1;
 				
 				for (String listedPlayer : listedPlayers) {
 					Set<String> playerAbilities = getPlayerAbilities(listedPlayer);
+					StringBuilder line = new StringBuilder();
 					
-					sender.sendMessage(ChatColor.BLUE + listedPlayer);
+					line.append(ChatColor.GOLD + listedPlayer);
 					
 					if (playerAbilities != null) {
 						for (String listedAbility : playerAbilities) {
@@ -375,23 +401,40 @@ public class AbilityTrader extends JavaPlugin {
 							long expiresAt = getConfig().getLong(String.format("players.%s.%s.expires_at", listedPlayer, listedAbility), 0);
 							String timeRemaining = expiresAt == 0 ? "" : String.format("%s remaining", formatDuration(expiresAt - getUnixTime()));
 							
-							sender.sendMessage(String.format(ChatColor.YELLOW + "%s -- %s", listedAbility, description));
+							line.append(String.format(ChatColor.YELLOW + "\n%s -- %s", listedAbility, description));
 
 							// Only show when remaining time is a positive number - the task doesn't remove abilities at the exact moment of expiry
-							if ((expiresAt - getUnixTime()) > 0) {					
+							if ((expiresAt - getUnixTime()) > 0) {
 								
 								if (timeRemaining != "") {
-									sender.sendMessage(timeRemaining);
+									line.append("\n" + ChatColor.RESET + timeRemaining);
 								}
 							} else {
 								if (timeRemaining != "") {
-									sender.sendMessage("expired - pending removal");
+									line.append("\n" + ChatColor.RESET + "expired - pending removal");
 								}
 							}
 						}
 					}
+					
+					map.put(i, line.toString());
+					i++;
 				}
 				
+				try {
+					int pageNumber;
+					if (args.length == 1) {
+						pageNumber = 1;
+					} else {
+						pageNumber = Integer.valueOf(args[1]);
+					}
+					
+					sender.sendMessage(ChatColor.BLUE + "Players With Abilities" + ChatColor.RESET);
+					paginate(sender, map, pageNumber, getConfig().getInt("page_results", 10));
+				} catch (NumberFormatException e) {
+					sender.sendMessage(ChatColor.RED + "Please specify a page number");
+				}
+
 				return true;
 			// Remove an ability from another player
 			} else if (perms.has(sender, "abilitytrader.admin.remove") && command.equals("remove")) {
@@ -473,9 +516,12 @@ public class AbilityTrader extends JavaPlugin {
 					return true;
 				}
 				
-				sender.sendMessage(ChatColor.GOLD + "Available Abilities");
+				SortedMap<Integer, String> map = new TreeMap<Integer, String>();
+				int i = 1;
 				
 				for (String ability : availableAbilities) {
+					StringBuilder line = new StringBuilder();
+
 					String description = getConfig().getString(String.format("abilities.%s.description", ability), "No description");
 					Integer duration = getConfig().getInt(String.format("abilities.%s.duration", ability), 0);
 					
@@ -488,7 +534,7 @@ public class AbilityTrader extends JavaPlugin {
 					boolean isHidden = getConfig().getBoolean(String.format("abilities.%s.hidden", ability), false);
 					
 					if (perms.has(sender, "abilitytrader.showhidden") || !isHidden) {
-						sender.sendMessage(ChatColor.YELLOW + String.format("%s -- %s", ability, description));
+						line.append(ChatColor.GOLD + String.format("%s -- %s\n" + ChatColor.RESET, ability, description));
 					
 						boolean is_exp;
 						
@@ -503,23 +549,41 @@ public class AbilityTrader extends JavaPlugin {
 						
 						if (is_exp) {
 							if (rentExp == -1 && buyExp >= 0) {
-								sender.sendMessage(String.format("%s to buy", buyExp + " exp"));
+								line.append(String.format("%s to buy", buyExp + " exp"));
 							} else if (rentExp >= 0 && buyExp == -1) {
-								sender.sendMessage(String.format("%s to rent for %s", rentExp + " exp", formatDuration(duration)));
+								line.append(String.format("%s to rent for %s", rentExp + " exp", formatDuration(duration)));
 							} else {
-								sender.sendMessage(String.format("%s to buy or %s to rent for %s", buyExp + " exp", rentExp + " exp", formatDuration(duration)));
+								line.append(String.format("%s to buy or %s to rent for %s", buyExp + " exp", rentExp + " exp", formatDuration(duration)));
 							}
 						} else {
 							if (rentMoney == -1 && buyMoney >= 0) {
-								sender.sendMessage(String.format("%s to buy", econ.format(buyMoney)));
+								line.append(String.format("%s to buy", econ.format(buyMoney)));
 							} else if (rentMoney >= 0 && buyMoney == -1) {
-								sender.sendMessage(String.format("%s to rent for %s", econ.format(rentMoney), formatDuration(duration)));
+								line.append(String.format("%s to rent for %s", econ.format(rentMoney), formatDuration(duration)));
 							} else {
-								sender.sendMessage(String.format("%s to buy or %s to rent for %s", econ.format(buyMoney), econ.format(rentMoney), formatDuration(duration)));
+								line.append(String.format("%s to buy or %s to rent for %s", econ.format(buyMoney), econ.format(rentMoney), formatDuration(duration)));
 							}
 						}
 					}
+					
+					map.put(i, line.toString());
+					i++;
 				}
+				
+				try {
+					int pageNumber;
+					if (args.length == 1) {
+						pageNumber = 1;
+					} else {
+						pageNumber = Integer.valueOf(args[1]);
+					}
+					
+					sender.sendMessage(ChatColor.BLUE + "Available Abilities" + ChatColor.RESET);
+					paginate(sender, map, pageNumber, getConfig().getInt("page_results", 10));
+				} catch (NumberFormatException e) {
+					sender.sendMessage(ChatColor.RED + "Please specify a page number");
+				}
+
 			} else if (command.equals("info")) {
 				if (!(sender instanceof Player)) {
 					sender.sendMessage(ChatColor.RED + "The console does not have any abilities");
@@ -759,12 +823,12 @@ public class AbilityTrader extends JavaPlugin {
 			} else {
 				sender.sendMessage(ChatColor.GOLD + "Ability Trader Commands");
 				sender.sendMessage("/ability info -- Show which abilities you have");
-				sender.sendMessage("/ability list -- List available abilities");
+				sender.sendMessage("/ability list [page] -- List available abilities");
 				sender.sendMessage("/ability buy <ability> -- Buy <ability>");
 				sender.sendMessage("/ability rent <ability> -- Rent <ability>");
 				
 				if (perms.has(sender, "abilitytrader.admin.players")) {
-					sender.sendMessage("/ability players -- List players and their abilities");
+					sender.sendMessage("/ability players [page] -- List players and their abilities");
 				}
 				
 				if (perms.has(sender, "abilitytrader.admin.add")) {
